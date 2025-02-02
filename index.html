@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Chatbot OTTO</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    button { padding: 10px 20px; font-size: 16px; }
+    .info { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Chatbot OTTO</h1>
+  <button id="start-button">Falar</button>
+  <p id="command-text" class="info"></p>
+  <h2>Resposta:</h2>
+  <p id="response-text" class="info"></p>
+
+  <script>
+    const startButton = document.getElementById('start-button');
+    const commandText = document.getElementById('command-text');
+    const responseText = document.getElementById('response-text');
+
+    // Verifica se o navegador suporta SpeechRecognition
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Seu navegador não suporta reconhecimento de voz.");
+    } else {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'pt-BR';
+
+      recognition.onstart = function() {
+        commandText.innerHTML = "Escutando...";
+      };
+
+      recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        commandText.innerHTML = "Você disse: " + transcript;
+        // Envia o comando para o servidor
+        fetch('/process', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ command: transcript })
+        })
+        .then(response => response.json())
+        .then(data => {
+          responseText.innerHTML = data.response;
+          // Sintetiza a resposta usando a API de síntese de voz
+          const utterance = new SpeechSynthesisUtterance(data.response);
+          utterance.lang = 'pt-BR';
+          speechSynthesis.speak(utterance);
+        })
+        .catch(error => {
+          responseText.innerHTML = "Erro ao processar o comando.";
+          console.error('Erro:', error);
+        });
+      };
+
+      recognition.onerror = function(event) {
+        commandText.innerHTML = "Erro no reconhecimento: " + event.error;
+      };
+
+      startButton.addEventListener('click', () => {
+        recognition.start();
+      });
+    }
+  </script>
+</body>
+</html>
